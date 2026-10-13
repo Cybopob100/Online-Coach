@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
-import { ScrollView, Text } from 'react-native';
+import { ScrollView, Text, View } from 'react-native';
+import { Button, Chip, Field, SectionTitle } from '../../components/ui';
 import { showAlert } from '../../lib/alert';
-import { Button, Field } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
-import { t } from '../../lib/i18n';
+import { LANGS, t } from '../../lib/i18n';
+import { useLang } from '../../lib/language';
 import { supabase } from '../../lib/supabase';
 import { useColors } from '../../lib/theme';
 
 export default function ProfileScreen() {
   const c = useColors();
+  const { lang, setLang } = useLang();
   const { session, profile, refreshProfile } = useAuth();
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
@@ -34,6 +36,14 @@ export default function ProfileScreen() {
 
   return (
     <ScrollView contentContainerStyle={{ padding: 16, gap: 16 }}>
+      <SectionTitle>{t.language}</SectionTitle>
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+        {LANGS.map((l) => (
+          <Chip key={l.code} label={l.name} active={lang === l.code} onPress={() => setLang(l.code)} />
+        ))}
+      </View>
+
+      <SectionTitle>{t.tabProfile}</SectionTitle>
       <Text style={{ color: c.muted }}>{session?.user.email}</Text>
       <Field label={t.fullName} value={fullName} onChangeText={setFullName} autoComplete="name" />
       <Field label={t.phone} value={phone} onChangeText={setPhone} keyboardType="phone-pad" autoComplete="tel" />

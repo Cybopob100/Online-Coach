@@ -2,14 +2,16 @@ import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { LanguageProvider, useLang } from '../lib/language';
 import { PaymentProvider } from '../lib/payments';
 import { useColors } from '../lib/theme';
 
 function RootNavigator() {
   const { session, loading } = useAuth();
+  const { ready } = useLang();
   const c = useColors();
 
-  if (loading) {
+  if (loading || !ready) {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.bg }}>
         <ActivityIndicator color={c.accent} />
@@ -24,10 +26,12 @@ function RootNavigator() {
         headerTintColor: c.text,
         contentStyle: { backgroundColor: c.bg },
         headerShadowVisible: false,
+        headerBackButtonDisplayMode: 'minimal',
       }}
     >
       <Stack.Protected guard={!!session}>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+        <Stack.Screen name="kind/[kind]" options={{ title: '' }} />
         <Stack.Screen name="slot/[id]" options={{ title: '' }} />
       </Stack.Protected>
       <Stack.Protected guard={!session}>
@@ -39,11 +43,13 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <PaymentProvider>
-      <AuthProvider>
-        <StatusBar style="auto" />
-        <RootNavigator />
-      </AuthProvider>
-    </PaymentProvider>
+    <LanguageProvider>
+      <PaymentProvider>
+        <AuthProvider>
+          <StatusBar style="auto" />
+          <RootNavigator />
+        </AuthProvider>
+      </PaymentProvider>
+    </LanguageProvider>
   );
 }

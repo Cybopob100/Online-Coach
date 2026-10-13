@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "Coach Booking",
+    "name": "Online Coach",
     "slug": "coach-booking",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -32,6 +32,12 @@
         {
           "merchantIdentifier": "merchant.com.example.coachbooking",
           "enableGooglePay": true
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#D9481C"
         }
       ]
     ],

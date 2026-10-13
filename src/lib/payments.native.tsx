@@ -1,7 +1,6 @@
 import { PaymentSheetError, StripeProvider, useStripe } from '@stripe/stripe-react-native';
 import * as Linking from 'expo-linking';
 import { ReactNode } from 'react';
-import { Alert } from 'react-native';
 import { t } from './i18n';
 import { demoPay, PayerDetails, PaymentInit, PaymentResult } from './paymentsShared';
 import { DEMO } from './supabase';
@@ -22,19 +21,11 @@ export function PaymentProvider({ children }: { children: ReactNode }) {
   );
 }
 
-const confirmNative = (text: string) =>
-  new Promise<boolean>((resolve) =>
-    Alert.alert('', text, [
-      { text: t.no, style: 'cancel', onPress: () => resolve(false) },
-      { text: t.pay, onPress: () => resolve(true) },
-    ]),
-  );
-
 export function usePayment() {
   const { initPaymentSheet, presentPaymentSheet } = useStripe();
 
   return async (init: PaymentInit, details: PayerDetails): Promise<PaymentResult> => {
-    if (DEMO) return demoPay(init, confirmNative);
+    if (DEMO) return demoPay(init);
 
     // Готовим платёжную форму Stripe (карта, BLIK, Przelewy24, Apple/Google Pay)
     const { error: initError } = await initPaymentSheet({

@@ -8,6 +8,7 @@ const light = {
   border: '#E2E0D9',
   accent: '#D9481C', // цвет «железа и мела» — поменяйте под свой бренд
   accentText: '#FFFFFF',
+  accentSoft: '#F9E1D6',
   success: '#1F8A4C',
   warning: '#B7791F',
   danger: '#C0392B',
@@ -21,6 +22,7 @@ const dark: typeof light = {
   border: '#2A2A2A',
   accent: '#F05A28',
   accentText: '#FFFFFF',
+  accentSoft: '#3A2017',
   success: '#3FB871',
   warning: '#E0A43A',
   danger: '#E5584A',

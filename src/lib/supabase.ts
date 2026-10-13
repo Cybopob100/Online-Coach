@@ -46,17 +46,20 @@ export async function callFunction<T>(name: string, body: Record<string, unknown
   return data as T;
 }
 
+export type Kind = 'online' | 'gym' | 'group';
+
 export type Slot = {
   slot_id: string;
   starts_at: string;
-  location: string | null;
+  duration_min: number;
   capacity: number;
   booked: number;
-  service_id: string;
-  title: string;
   description: string | null;
-  duration_min: number;
+  kind: Kind;
   price_grosze: number;
+  gym_id: string | null;
+  gym_name: string | null;
+  gym_address: string | null;
   my_booking_status: 'pending_payment' | 'paid' | null;
 };
 
@@ -66,14 +69,28 @@ export type Booking = {
   id: string;
   status: BookingStatus;
   amount_grosze: number;
+  refunded_grosze: number | null;
   created_at: string;
   slots: {
     id: string;
     starts_at: string;
-    location: string | null;
-    services: { title: string; duration_min: number };
+    duration_min: number;
+    gyms: { name: string } | null;
+    services: { kind: Kind };
   };
 };
+
+export type Gym = { id: string; name: string; address: string | null; is_active: boolean };
+
+export type Service = {
+  id: string;
+  kind: Kind;
+  price_grosze: number;
+  default_duration_min: number;
+  default_capacity: number;
+};
+
+export type AppSettings = { cancel_fee_grosze: number; refund_hours: number };
 
 export type Profile = {
   id: string;

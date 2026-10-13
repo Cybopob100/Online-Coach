@@ -1,84 +1,84 @@
+// Главный экран клиента: выбор одного из трёх видов тренировок.
 import { router, useFocusEffect } from 'expo-router';
-import { useCallback, useMemo, useState } from 'react';
-import { Pressable, RefreshControl, SectionList, Text, View } from 'react-native';
-import { Badge, Card, Empty } from '../../components/ui';
-import { dayKey, formatDay, formatPrice, formatTime } from '../../lib/format';
+import { useCallback, useState } from 'react';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { KindArt } from '../../components/KindArt';
+import { formatPrice } from '../../lib/format';
 import { t } from '../../lib/i18n';
-import { Slot, supabase } from '../../lib/supabase';
+import { useLang } from '../../lib/language';
+import { Kind, Service, Slot, supabase } from '../../lib/supabase';
 import { useColors } from '../../lib/theme';
 
-export default function ScheduleScreen() {
+const KINDS: Kind[] = ['gym', 'group', 'online'];
+
+export default function TrainingsScreen() {
   const c = useColors();
-  const [slots, setSlots] = useState<Slot[]>([]);
-  const [refreshing, setRefreshing] = useState(false);
+  useLang();
+  const [prices, setPrices] = useState<Partial<Record<Kind, number>>>({});
+  const [open, setOpen] = useState<Partial<Record<Kind, number>>>({});
 
   const load = useCallback(async () => {
-    setRefreshing(true);
-    const { data } = await supabase.rpc('get_upcoming_slots', { days_ahead: 30 });
-    setSlots((data as Slot[]) ?? []);
-    setRefreshing(false);
+    const [{ data: sv }, { data: sl }] = await Promise.all([
+      supabase.from('services').select('kind, price_grosze').eq('is_active', true),
+      supabase.rpc('get_upcoming_slots', { days_ahead: 30 }),
+    ]);
+    setPrices(Object.fromEntries(((sv as Service[]) ?? []).map((s) => [s.kind, s.price_grosze])));
+    const counts: Partial<Record<Kind, number>> = {};
+    for (const s of (sl as Slot[]) ?? []) {
+      if (s.booked < s.capacity) counts[s.kind] = (counts[s.kind] ?? 0) + 1;
+    }
+    setOpen(counts);
   }, []);
 
-  // Обновляем при каждом возврате на вкладку (после оплаты места меняются)
   useFocusEffect(
     useCallback(() => {
       load();
     }, [load]),
   );
 
-  const sections = useMemo(() => {
-    const map = new Map<string, Slot[]>();
-    for (const s of slots) {
-      const k = dayKey(s.starts_at);
-      map.set(k, [...(map.get(k) ?? []), s]);
-    }
-    return [...map.values()].map((data) => ({ title: formatDay(data[0].starts_at), data }));
-  }, [slots]);
-
   return (
-    <SectionList
-      sections={sections}
-      keyExtractor={(s) => s.slot_id}
-      contentContainerStyle={{ padding: 16, gap: 10 }}
-      refreshControl={<RefreshControl refreshing={refreshing} onRefresh={load} tintColor={c.accent} />}
-      ListEmptyComponent={refreshing ? null : <Empty text={t.noSlots} />}
-      stickySectionHeadersEnabled={false}
-      renderSectionHeader={({ section }) => (
-        <Text style={{ color: c.text, fontSize: 18, fontWeight: '800', marginTop: 12 }}>
-          {section.title}
-        </Text>
-      )}
-      renderItem={({ item }) => {
-        const left = item.capacity - item.booked;
-        return (
-          <Pressable onPress={() => router.push(`/slot/${item.slot_id}`)}>
-            {({ pressed }) => (
-              <Card style={{ opacity: pressed ? 0.8 : 1 }}>
-                <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                  <Text style={{ color: c.accent, fontSize: 22, fontWeight: '800' }}>{formatTime(item.starts_at)}</Text>
-                  <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>{formatPrice(item.price_grosze)}</Text>
+    <ScrollView contentContainerStyle={{ padding: 16, gap: 14 }}>
+      <Text style={{ color: c.text, fontSize: 24, fontWeight: '800', marginBottom: 2 }}>{t.chooseTraining}</Text>
+      {KINDS.filter((k) => prices[k] !== undefined).map((kind) => (
+        <Pressable
+          key={kind}
+          onPress={() => router.push(`/kind/${kind}`)}
+          accessibilityRole="button"
+          accessibilityLabel={t.kinds[kind]}
+        >
+          {({ pressed }) => (
+            <View
+              style={{
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 14,
+                backgroundColor: c.card,
+                borderColor: c.border,
+                borderWidth: 1,
+                borderRadius: 18,
+                padding: 14,
+                opacity: pressed ? 0.85 : 1,
+              }}
+            >
+              <View style={{ backgroundColor: c.accentSoft, borderRadius: 14, padding: 4 }}>
+                <KindArt kind={kind} size={84} />
+              </View>
+              <View style={{ flex: 1, gap: 4 }}>
+                <Text style={{ color: c.text, fontSize: 17, fontWeight: '800' }}>{t.kinds[kind]}</Text>
+                <Text style={{ color: c.muted, fontSize: 14 }}>{t.kindDesc[kind]}</Text>
+                <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, gap: 8 }}>
+                  <Text style={{ color: c.accent, fontWeight: '800', fontSize: 16 }}>
+                    {formatPrice(prices[kind] ?? 0)}
+                  </Text>
+                  <Text style={{ color: c.muted, fontSize: 13, flexShrink: 1, textAlign: 'right' }}>
+                    {t.nextSessions(open[kind] ?? 0)}
+                  </Text>
                 </View>
-                <Text style={{ color: c.text, fontSize: 16, fontWeight: '600' }}>{item.title}</Text>
-                <Text style={{ color: c.muted }}>
-                  {item.duration_min} {t.minutes}
-                  {item.location ? ` · ${item.location}` : ''}
-                </Text>
-                <View style={{ marginTop: 4 }}>
-                  {item.my_booking_status === 'paid' ? (
-                    <Badge text={t.booked} tone="success" />
-                  ) : item.my_booking_status === 'pending_payment' ? (
-                    <Badge text={t.awaitingPayment} tone="warning" />
-                  ) : left > 0 ? (
-                    <Badge text={t.spotsLeft(left)} tone="muted" />
-                  ) : (
-                    <Badge text={t.full} tone="danger" />
-                  )}
-                </View>
-              </Card>
-            )}
-          </Pressable>
-        );
-      }}
-    />
+              </View>
+            </View>
+          )}
+        </Pressable>
+      ))}
+    </ScrollView>
   );
 }

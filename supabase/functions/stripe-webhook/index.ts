@@ -2,6 +2,7 @@
 // Деплоить с --no-verify-jwt: Stripe не присылает токен Supabase, подпись проверяем сами.
 import Stripe from "npm:stripe@17.7.0";
 import { adminClient, stripe } from "../_shared/clients.ts";
+import { notifyCoachAboutBooking } from "../_shared/notify.ts";
 
 const cryptoProvider = Stripe.createSubtleCryptoProvider();
 
@@ -28,13 +29,23 @@ Deno.serve(async (req) => {
   if (!bookingId) return new Response("ignored", { status: 200 });
 
   switch (event.type) {
-    case "payment_intent.succeeded":
-      await adminClient
+    case "payment_intent.succeeded": {
+      const { data: updated } = await adminClient
         .from("bookings")
         .update({ status: "paid", paid_at: new Date().toISOString() })
         .eq("id", bookingId)
-        .in("status", ["pending_payment", "cancelled"]); // оплата могла прийти после истечения 15 мин
+        .in("status", ["pending_payment", "cancelled"]) // оплата могла прийти после истечения 15 мин
+        .select("id");
+      // Уведомляем только при первом переходе в «оплачено» (Stripe может прислать событие повторно)
+      if (updated && updated.length > 0) {
+        try {
+          await notifyCoachAboutBooking(bookingId);
+        } catch (e) {
+          console.error("notify failed", e); // уведомление не должно ломать оплату
+        }
+      }
       break;
+    }
     case "payment_intent.canceled":
       await adminClient
         .from("bookings")

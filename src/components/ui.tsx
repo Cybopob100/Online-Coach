@@ -77,6 +77,33 @@ export function Badge({ text, tone }: { text: string; tone: 'success' | 'warning
   );
 }
 
+/** Кнопка-«таблетка» для выбора одного варианта (зал, день, вид, язык). */
+export function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const c = useColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="button"
+      accessibilityState={{ selected: active }}
+      style={{
+        borderWidth: 1.5,
+        borderColor: active ? c.accent : c.border,
+        backgroundColor: active ? c.accent : c.card,
+        borderRadius: 999,
+        paddingHorizontal: 14,
+        paddingVertical: 8,
+      }}
+    >
+      <Text style={{ color: active ? c.accentText : c.text, fontWeight: '600' }}>{label}</Text>
+    </Pressable>
+  );
+}
+
+export function SectionTitle({ children }: { children: ReactNode }) {
+  const c = useColors();
+  return <Text style={{ color: c.text, fontSize: 20, fontWeight: '800', marginTop: 12 }}>{children}</Text>;
+}
+
 export function Empty({ text }: { text: string }) {
   const c = useColors();
   return <Text style={{ color: c.muted, textAlign: 'center', marginTop: 48, fontSize: 15 }}>{text}</Text>;

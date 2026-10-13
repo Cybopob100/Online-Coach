@@ -1,8 +1,8 @@
 // Отмена записи клиентом.
-// Неоплаченная — отменяется сразу. Оплаченная — возврат денег, если до тренировки больше REFUND_HOURS.
+// Неоплаченная — отменяется сразу, без комиссии.
+// Оплаченная — возврат (цена минус комиссия), если до тренировки не меньше refund_hours.
+// Комиссия и срок задаются тренером в настройках приложения (таблица app_settings).
 import { adminClient, corsHeaders, json, stripe, userClient } from "../_shared/clients.ts";
-
-const REFUND_HOURS = Number(Deno.env.get("REFUND_HOURS") ?? 24);
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
@@ -14,7 +14,7 @@ Deno.serve(async (req) => {
     const { booking_id } = await req.json();
     const { data: booking } = await adminClient
       .from("bookings")
-      .select("id, user_id, status, stripe_payment_intent_id, slots(starts_at)")
+      .select("id, user_id, status, amount_grosze, stripe_payment_intent_id, slots(starts_at)")
       .eq("id", booking_id)
       .single();
 
@@ -27,22 +27,35 @@ Deno.serve(async (req) => {
         await stripe.paymentIntents.cancel(booking.stripe_payment_intent_id).catch(() => {});
       }
       await adminClient.from("bookings").update({ status: "cancelled", cancelled_at: now }).eq("id", booking.id);
-      return json({ status: "cancelled" });
+      return json({ status: "cancelled", refunded_grosze: 0, fee_grosze: 0 });
     }
 
     if (booking.status === "paid") {
+      const { data: settings } = await adminClient
+        .from("app_settings")
+        .select("cancel_fee_grosze, refund_hours")
+        .single();
+      const fee = settings?.cancel_fee_grosze ?? 0;
+      const refundHours = settings?.refund_hours ?? 24;
+
       // deno-lint-ignore no-explicit-any
       const startsAt = new Date((booking.slots as any).starts_at).getTime();
-      const hoursLeft = (startsAt - Date.now()) / 36e5;
-      if (hoursLeft < REFUND_HOURS) {
-        return json({ error: "too_late_to_cancel", refund_hours: REFUND_HOURS }, 409);
+      if ((startsAt - Date.now()) / 36e5 < refundHours) {
+        return json({ error: "too_late_to_cancel", refund_hours: refundHours }, 409);
       }
-      await stripe.refunds.create(
-        { payment_intent: booking.stripe_payment_intent_id! },
-        { idempotencyKey: `refund-${booking.id}` },
-      );
-      await adminClient.from("bookings").update({ status: "refunded", cancelled_at: now }).eq("id", booking.id);
-      return json({ status: "refunded" });
+
+      const refund = Math.max(0, booking.amount_grosze - fee);
+      if (refund > 0) {
+        await stripe.refunds.create(
+          { payment_intent: booking.stripe_payment_intent_id!, amount: refund },
+          { idempotencyKey: `refund-${booking.id}` },
+        );
+      }
+      await adminClient
+        .from("bookings")
+        .update({ status: "refunded", refunded_grosze: refund, cancelled_at: now })
+        .eq("id", booking.id);
+      return json({ status: "refunded", refunded_grosze: refund, fee_grosze: booking.amount_grosze - refund });
     }
 
     return json({ error: "not_cancellable" }, 409);
