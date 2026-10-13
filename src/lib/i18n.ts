@@ -27,6 +27,7 @@ const ru = {
   // слот
   bookAndPay: (price: string) => `Записаться и оплатить ${price}`,
   continuePayment: 'Продолжить оплату',
+  pay: 'Оплатить',
   paymentSuccess: 'Оплата прошла! Ждём вас на тренировке.',
   paymentProcessing: 'Платёж обрабатывается. Статус обновится в «Мои записи».',
   paymentCancelled: 'Оплата отменена. Место держится 15 минут.',
@@ -100,6 +101,7 @@ const pl: Strings = {
   minutes: 'min',
   bookAndPay: (price) => `Zapisz się i zapłać ${price}`,
   continuePayment: 'Dokończ płatność',
+  pay: 'Zapłać',
   paymentSuccess: 'Płatność przyjęta! Do zobaczenia na treningu.',
   paymentProcessing: 'Płatność w trakcie. Status zaktualizuje się w „Moje zapisy”.',
   paymentCancelled: 'Płatność anulowana. Miejsce jest zarezerwowane przez 15 minut.',

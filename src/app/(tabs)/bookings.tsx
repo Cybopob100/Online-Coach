@@ -1,6 +1,7 @@
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useMemo, useState } from 'react';
-import { Alert, RefreshControl, SectionList, Text, View } from 'react-native';
+import { RefreshControl, SectionList, Text, View } from 'react-native';
+import { showAlert } from '../../lib/alert';
 import { Badge, Button, Card, Empty } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDateTime, formatPrice } from '../../lib/format';
@@ -56,7 +57,7 @@ export default function BookingsScreen() {
   }, [bookings]);
 
   function confirmCancel(b: Booking) {
-    Alert.alert(t.cancelConfirmTitle, b.status === 'paid' ? t.cancelConfirmPaid : t.cancelConfirmPending, [
+    showAlert(t.cancelConfirmTitle, b.status === 'paid' ? t.cancelConfirmPaid : t.cancelConfirmPending, [
       { text: t.no, style: 'cancel' },
       {
         text: t.yes,
@@ -67,7 +68,7 @@ export default function BookingsScreen() {
             await callFunction('cancel-booking', { booking_id: b.id });
             await load();
           } catch (e) {
-            Alert.alert(t.error, errorText((e as Error).message));
+            showAlert(t.error, errorText((e as Error).message));
           } finally {
             setCancelling(null);
           }
@@ -90,7 +91,7 @@ export default function BookingsScreen() {
       renderItem={({ item, section }) => (
         <Card>
           <Text style={{ color: c.text, fontSize: 16, fontWeight: '700' }}>{item.slots.services.title}</Text>
-          <Text style={{ color: c.muted, textTransform: 'capitalize' }}>{formatDateTime(item.slots.starts_at)}</Text>
+          <Text style={{ color: c.muted }}>{formatDateTime(item.slots.starts_at)}</Text>
           <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginTop: 4 }}>
             <Badge text={t.status[item.status]} tone={tone[item.status]} />
             <Text style={{ color: c.text, fontWeight: '600' }}>{formatPrice(item.amount_grosze)}</Text>

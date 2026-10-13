@@ -2,7 +2,8 @@
 // Виден только пользователям с role = 'coach' в таблице profiles.
 import { useFocusEffect } from 'expo-router';
 import { useCallback, useState } from 'react';
-import { Alert, Pressable, ScrollView, Text, View } from 'react-native';
+import { Pressable, ScrollView, Text, View } from 'react-native';
+import { showAlert } from '../../lib/alert';
 import { Badge, Button, Card, Empty, Field } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDateTime, formatPrice, parseLocalDateTime } from '../../lib/format';
@@ -52,7 +53,7 @@ export default function CoachScreen() {
 
   async function createSlot() {
     const date = parseLocalDateTime(when);
-    if (!date) return Alert.alert(t.error, errorText('invalid_date'));
+    if (!date) return showAlert(t.error, errorText('invalid_date'));
     if (!serviceId) return;
     setSaving(true);
     const { error } = await supabase.from('slots').insert({
@@ -62,14 +63,14 @@ export default function CoachScreen() {
       location: location.trim() || null,
     });
     setSaving(false);
-    if (error) return Alert.alert(t.error, error.message);
+    if (error) return showAlert(t.error, error.message);
     setWhen('');
     await load();
   }
 
   function cancelSlot(slot: Slot) {
     // Возвраты оплатившим делайте в Stripe Dashboard (Payments → Refund)
-    Alert.alert(t.cancelSlot, formatDateTime(slot.starts_at), [
+    showAlert(t.cancelSlot, formatDateTime(slot.starts_at), [
       { text: t.no, style: 'cancel' },
       {
         text: t.yes,
@@ -128,7 +129,7 @@ export default function CoachScreen() {
       {slots.length === 0 && <Empty text={t.noSlots} />}
       {slots.map((s) => (
         <Card key={s.slot_id}>
-          <Text style={{ color: c.accent, fontWeight: '800', textTransform: 'capitalize' }}>
+          <Text style={{ color: c.accent, fontWeight: '800' }}>
             {formatDateTime(s.starts_at)}
           </Text>
           <Text style={{ color: c.text, fontWeight: '700' }}>

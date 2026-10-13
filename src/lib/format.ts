@@ -6,8 +6,10 @@ export const formatPrice = (grosze: number) =>
 export const formatTime = (iso: string) =>
   new Date(iso).toLocaleTimeString(dateLocale, { hour: '2-digit', minute: '2-digit' });
 
+const capitalize = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
+
 export const formatDay = (iso: string) =>
-  new Date(iso).toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' });
+  capitalize(new Date(iso).toLocaleDateString(dateLocale, { weekday: 'long', day: 'numeric', month: 'long' }));
 
 export const formatDateTime = (iso: string) => `${formatDay(iso)}, ${formatTime(iso)}`;
 

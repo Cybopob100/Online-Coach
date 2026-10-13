@@ -1,11 +1,9 @@
-import { StripeProvider } from '@stripe/stripe-react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ActivityIndicator, View } from 'react-native';
 import { AuthProvider, useAuth } from '../lib/auth';
+import { PaymentProvider } from '../lib/payments';
 import { useColors } from '../lib/theme';
-
-const STRIPE_KEY = process.env.EXPO_PUBLIC_STRIPE_PUBLISHABLE_KEY ?? '';
 
 function RootNavigator() {
   const { session, loading } = useAuth();
@@ -41,15 +39,11 @@ function RootNavigator() {
 
 export default function RootLayout() {
   return (
-    <StripeProvider
-      publishableKey={STRIPE_KEY}
-      urlScheme="coachbooking" // для возврата из BLIK / Przelewy24
-      merchantIdentifier="merchant.com.example.coachbooking" // Apple Pay
-    >
+    <PaymentProvider>
       <AuthProvider>
         <StatusBar style="auto" />
         <RootNavigator />
       </AuthProvider>
-    </StripeProvider>
+    </PaymentProvider>
   );
 }

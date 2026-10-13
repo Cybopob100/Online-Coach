@@ -44,7 +44,7 @@ export default function ScheduleScreen() {
       ListEmptyComponent={refreshing ? null : <Empty text={t.noSlots} />}
       stickySectionHeadersEnabled={false}
       renderSectionHeader={({ section }) => (
-        <Text style={{ color: c.text, fontSize: 18, fontWeight: '800', marginTop: 12, textTransform: 'capitalize' }}>
+        <Text style={{ color: c.text, fontSize: 18, fontWeight: '800', marginTop: 12 }}>
           {section.title}
         </Text>
       )}

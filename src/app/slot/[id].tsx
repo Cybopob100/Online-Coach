@@ -1,24 +1,22 @@
-import { PaymentSheetError, useStripe } from '@stripe/stripe-react-native';
-import * as Linking from 'expo-linking';
 import { router, Stack, useLocalSearchParams } from 'expo-router';
 import { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, ScrollView, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, Text, View } from 'react-native';
+import { showAlert } from '../../lib/alert';
 import { Badge, Button, Card } from '../../components/ui';
 import { useAuth } from '../../lib/auth';
 import { formatDateTime, formatPrice } from '../../lib/format';
 import { errorText, t } from '../../lib/i18n';
+import { PaymentInit, usePayment } from '../../lib/payments';
 import { callFunction, Slot, supabase } from '../../lib/supabase';
 import { useColors } from '../../lib/theme';
 
 const REFUND_HOURS = 24; // должно совпадать с REFUND_HOURS в edge-функции cancel-booking
 
-type PaymentInit = { bookingId: string; paymentIntent: string; ephemeralKey: string; customer: string };
-
 export default function SlotScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const c = useColors();
   const { session, profile } = useAuth();
-  const { initPaymentSheet, presentPaymentSheet } = useStripe();
+  const payWith = usePayment();
   const [slot, setSlot] = useState<Slot | null>(null);
   const [paying, setPaying] = useState(false);
 
@@ -38,36 +36,22 @@ export default function SlotScreen() {
       // 1. Бронь + PaymentIntent на сервере
       const init = await callFunction<PaymentInit>('create-payment-intent', { slot_id: slot.slot_id });
 
-      // 2. Готовим платёжную форму Stripe (карта, BLIK, Przelewy24, Apple/Google Pay)
-      const { error: initError } = await initPaymentSheet({
-        merchantDisplayName: t.appName,
-        customerId: init.customer,
-        customerEphemeralKeySecret: init.ephemeralKey,
-        paymentIntentClientSecret: init.paymentIntent,
-        allowsDelayedPaymentMethods: false,
-        returnURL: Linking.createURL('stripe-redirect'),
-        defaultBillingDetails: { email: session?.user.email, name: profile?.full_name ?? undefined },
-        applePay: { merchantCountryCode: 'PL' },
-        googlePay: { merchantCountryCode: 'PL', currencyCode: 'PLN', testEnv: __DEV__ },
-      });
-      if (initError) throw new Error(initError.message);
-
-      // 3. Показываем форму оплаты
-      const { error } = await presentPaymentSheet();
-      if (error) {
-        if (error.code === PaymentSheetError.Canceled) {
-          Alert.alert(t.appName, t.paymentCancelled);
-        } else {
-          Alert.alert(t.error, error.message);
-        }
+      // 2. Форма оплаты Stripe (карта, BLIK, Przelewy24, Apple/Google Pay)
+      const result = await payWith(
+        { ...init, amount: slot.price_grosze },
+        { email: session?.user.email, name: profile?.full_name ?? undefined },
+      );
+      if (result.status !== 'paid') {
+        if (result.status === 'cancelled') showAlert(t.appName, t.paymentCancelled);
+        else showAlert(t.error, result.message);
         await load();
         return;
       }
 
-      // 4. Успех. Статус «paid» ставит вебхук Stripe — он приходит через секунду-две
-      Alert.alert(t.appName, t.paymentSuccess, [{ text: 'OK', onPress: () => router.replace('/bookings') }]);
+      // 3. Успех. Статус «paid» ставит вебхук Stripe — он приходит через секунду-две
+      showAlert(t.appName, t.paymentSuccess, [{ text: 'OK', onPress: () => router.replace('/bookings') }]);
     } catch (e) {
-      Alert.alert(t.error, errorText((e as Error).message));
+      showAlert(t.error, errorText((e as Error).message));
       await load();
     } finally {
       setPaying(false);
@@ -92,7 +76,7 @@ export default function SlotScreen() {
 
       <View style={{ gap: 4 }}>
         <Text style={{ color: c.text, fontSize: 26, fontWeight: '800' }}>{slot.title}</Text>
-        <Text style={{ color: c.accent, fontSize: 18, fontWeight: '700', textTransform: 'capitalize' }}>
+        <Text style={{ color: c.accent, fontSize: 18, fontWeight: '700' }}>
           {formatDateTime(slot.starts_at)}
         </Text>
       </View>

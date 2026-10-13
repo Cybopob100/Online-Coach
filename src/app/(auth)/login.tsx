@@ -1,16 +1,17 @@
 import { useState } from 'react';
-import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { KeyboardAvoidingView, Platform, Pressable, ScrollView, Text, View } from 'react-native';
+import { showAlert } from '../../lib/alert';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Button, Field } from '../../components/ui';
 import { t } from '../../lib/i18n';
-import { supabase } from '../../lib/supabase';
+import { DEMO, supabase } from '../../lib/supabase';
 import { useColors } from '../../lib/theme';
 
 export default function LoginScreen() {
   const c = useColors();
   const [mode, setMode] = useState<'signIn' | 'signUp'>('signIn');
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail] = useState(DEMO ? 'demo@coach.pl' : '');
+  const [password, setPassword] = useState(DEMO ? 'demo123' : '');
   const [fullName, setFullName] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -23,10 +24,10 @@ export default function LoginScreen() {
         : await supabase.auth.signUp({ ...creds, options: { data: { full_name: fullName.trim() } } });
     setLoading(false);
 
-    if (error) return Alert.alert(t.error, error.message);
+    if (error) return showAlert(t.error, error.message);
     // Если в Supabase включено подтверждение email — сессии ещё нет
     if (mode === 'signUp' && !data.session) {
-      Alert.alert(t.appName, t.checkEmail);
+      showAlert(t.appName, t.checkEmail);
       setMode('signIn');
     }
   }
@@ -38,6 +39,11 @@ export default function LoginScreen() {
           <View style={{ marginBottom: 16 }}>
             <Text style={{ color: c.accent, fontSize: 14, fontWeight: '800', letterSpacing: 2 }}>COACH</Text>
             <Text style={{ color: c.text, fontSize: 30, fontWeight: '800' }}>{t.appName}</Text>
+            {DEMO && (
+              <Text style={{ color: c.muted, marginTop: 8 }}>
+                DEMO — тестовые данные, без реальных оплат. Нажмите «{t.signIn}».
+              </Text>
+            )}
           </View>
 
           {mode === 'signUp' && (
