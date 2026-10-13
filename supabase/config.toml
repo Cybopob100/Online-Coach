@@ -1,0 +1,5 @@
+project_id = "coach-booking"
+
+[functions.stripe-webhook]
+# Stripe не отправляет JWT Supabase — подпись проверяется внутри функции
+verify_jwt = false
